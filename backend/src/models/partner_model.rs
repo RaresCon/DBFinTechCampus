@@ -1,5 +1,5 @@
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Partner {
@@ -8,6 +8,6 @@ pub struct Partner {
     pub name: String,
     pub description: String,
     pub image_link: String,
-    #[serde(default)]
+    #[serde(default, skip_deserializing)]
     pub token: String,
 }

@@ -1,12 +1,21 @@
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Offer {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
+    pub partner_name: String,
     pub name: String,
     pub description: String,
-    pub cont: f64,
-    //pub wallet:
+    pub num: i32,
+    pub cost: i32,
+    pub category: String,
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OfferPayment {
+    pub offer_id: String,
+    pub user_id: String,
 }

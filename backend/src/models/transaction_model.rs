@@ -1,14 +1,17 @@
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Transaction {
-    pub user_id: String,
     pub payer: String,
     pub receiver: String,
     pub intent: String,
     pub amount: f64,
     pub category: String,
+    pub date: String,
     pub blockchain_hash: String,
-    //pub wallet:
+}
+
+pub struct OngoingTransaction {
+
 }

@@ -7,23 +7,29 @@ mod repository;
 use rocket::{get, http::Status, Request, Response, serde::json::Json};
 use rocket::fairing::{AdHoc, Fairing, Info, Kind};
 use rocket::http::{Header, Method};
-use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
+use rocket_cors::{AllowedHeaders, AllowedOrigins, Cors, CorsOptions};
 use crate::repository::repository::MongoRepo;
-use api::user_api::{create_user, get_user};
+use api::user_api::{register, login};
 
 #[launch]
 fn rocket() -> _ {
     let db = MongoRepo::init();
-    let cors = CorsOptions::default().allowed_origins(AllowedOrigins::all())
-                                     .allowed_methods(
-                                        vec![Method::Get, Method::Post, Method::Patch]
-                                            .into_iter()
-                                            .map(From::from)
-                                            .collect(),
-                                     );
 
     rocket::build().manage(db)
-                   .attach(cors.to_cors().unwrap())
-                   .mount("/", routes![create_user])
-                   .mount("/", routes![get_user])
+                   .attach(create_cors())
+                   .mount("/", routes![register])
+                   .mount("/", routes![login])
+}
+
+fn create_cors() -> Cors {
+    let cors = CorsOptions::default().allowed_origins(AllowedOrigins::all())
+                                     .allowed_methods(
+                                        vec![Method::Get,
+                                             Method::Post,
+                                             Method::Patch,
+                                             Method::Delete].into_iter()
+                                                            .map(From::from)
+                                                            .collect(),
+                                     );
+    cors.to_cors().expect("Error creating CORS\n")
 }

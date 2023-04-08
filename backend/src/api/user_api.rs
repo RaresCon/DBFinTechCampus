@@ -5,8 +5,8 @@ use sha2::{Sha256, Digest, digest};
 use sha2::digest::FixedOutput;
 use crate::models::user_model::{BearerToken, UserLogin};
 
-#[post("/user", data = "<new_user>")]
-pub fn create_user(
+#[post("/register", data = "<new_user>")]
+pub fn register(
     db: &State<MongoRepo>,
     new_user: Json<User>,
 ) -> Result<Json<BearerToken>, Status> {
@@ -24,16 +24,19 @@ pub fn create_user(
                                                                Sha256::default())) };
     match user_detail {
         Ok(_user) => Ok(Json(token)),
-        Err(_) => Err(Status::InternalServerError),
+        Err(status) => Err(status),
     }
 }
 
 #[post("/login", data = "<req_user>")]
-pub fn get_user(db: &State<MongoRepo>, req_user: Json<UserLogin>) -> Result<Json<User>, Status> {
+pub fn login(db: &State<MongoRepo>, req_user: Json<UserLogin>) -> Result<Json<BearerToken>, Status> {
     let user_detail = db.login_user(req_user.e_mail.clone(),
                                     req_user.password.clone());
+
+    let token = BearerToken { token: format!("{}", create_hash(req_user.e_mail.clone().as_str(),
+                                                               Sha256::default())) };
     match user_detail {
-        Ok(user) => Ok(Json(user)),
+        Ok(_) => Ok(Json(token)),
         Err(_) => Err(Status::InternalServerError),
     }
 }

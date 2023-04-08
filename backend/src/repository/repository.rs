@@ -37,7 +37,11 @@ impl MongoRepo {
         MongoRepo { col_users, col_wallets }
     }
 
-    pub fn create_user(&self, new_user: User) -> Result<InsertOneResult, Error> {
+    pub fn create_user(&self, new_user: User) -> Result<InsertOneResult, Status> {
+        if !self.check_user(new_user.e_mail.clone()) {
+            return Err(Status::BadRequest);
+        }
+
         let user_email_clone = new_user.e_mail.clone();
         let new_user_doc = User {
             id: None,
@@ -62,7 +66,7 @@ impl MongoRepo {
             user_id: current_user.id.unwrap(),
             e_mail: user_email_clone,
             personal_num: String::from("1111 1111 1111 1111"),
-            coins: 0,
+            coins: 100,
             currency: 0.0,
         };
         let wallet = self.col_wallets
@@ -92,5 +96,13 @@ impl MongoRepo {
                 Ok(details)
             }
         };
+    }
+
+    fn check_user(&self, user_e_mail: String) -> bool {
+        let filter = doc! {"e_mail": user_e_mail};
+        return match self.col_users.find_one(filter, None).ok() {
+            None => { true }
+            Some(_) => { false }
+        }
     }
 }

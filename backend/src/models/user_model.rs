@@ -15,3 +15,8 @@ pub struct UserLogin {
     pub e_mail: String,
     pub password: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BearerToken {
+    pub token: String,
+}

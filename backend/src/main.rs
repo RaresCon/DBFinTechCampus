@@ -4,12 +4,14 @@ mod repository;
 
 // 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
 #[macro_use] extern crate rocket;
-use rocket::{get, http::Status, Request, Response, serde::json::Json};
-use rocket::fairing::{AdHoc, Fairing, Info, Kind};
-use rocket::http::{Header, Method};
-use rocket_cors::{AllowedHeaders, AllowedOrigins, Cors, CorsOptions};
+extern crate core;
+
+
+use rocket::http::{Method};
+use rocket_cors::{AllowedOrigins, Cors, CorsOptions};
 use crate::repository::repository::MongoRepo;
 use api::user_api::{register, login};
+use api::partner_api::{create_partner, get_partners};
 
 #[launch]
 fn rocket() -> _ {
@@ -19,6 +21,9 @@ fn rocket() -> _ {
                    .attach(create_cors())
                    .mount("/", routes![register])
                    .mount("/", routes![login])
+                   .mount("/", routes![create_partner])
+                   .mount("/", routes![get_partners])
+
 }
 
 fn create_cors() -> Cors {

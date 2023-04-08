@@ -2,11 +2,13 @@ import {Link} from "react-router-dom";
 import {useForm} from "react-hook-form";
 import axios from "axios";
 import {useCookies} from "react-cookie";
+import {useState} from "react";
 
 
 export default function RegisterComponent() {
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
-    const [cookies, setCookie, removeCookie] = useCookies(['cookie-name']);
+    const [cookies, setCookie, removeCookie] = useCookies(['token']);
+    const [notification, setNotification] = useState({});
 
     const onSubmit = data => {
         const reg = {
@@ -18,17 +20,21 @@ export default function RegisterComponent() {
         axios.post("enter-link", reg)
             .then(res => {
                 console.log(res.data);
-                setCookie("userToken", {
+                setCookie("token", {
                     token: res.data.token,
                     email: data.e_mail
                 }, {
                     path: "/"
-                });
+                })
+                window.location.replace("/home");
+            })
+            .catch((error) => {
+                console.log(error);
                 setNotification({
-                    message: res.data,
-                    isError: false,
-                }))
-            .catch();
+                    message: error.response.data.statusMessage.substring(8),
+                    isError: true
+                })
+            });
 
         console.log(reg)
     };
@@ -36,11 +42,11 @@ export default function RegisterComponent() {
     return (
         <section className="bg-gray-50 dark:bg-gray-900">
             <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-                <a href="#" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-                    <img className="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg"
+                <Link to="/" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+                    <img className="w-8 h-8 mr-2" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Deutsche_Bank_logo_without_wordmark.svg/1200px-Deutsche_Bank_logo_without_wordmark.svg.png"
                          alt="logo"/>
                         DB Student
-                </a>
+                </Link>
                 <div
                     className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
                     <div className="p-6 space-y-4 md:space-y-6 sm:p-8">

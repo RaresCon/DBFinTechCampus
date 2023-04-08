@@ -1,4 +1,6 @@
 use std::env;
+use std::fs::create_dir;
+
 extern crate dotenv;
 use dotenv::dotenv;
 
@@ -10,6 +12,10 @@ use mongodb::{
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::options::ClientOptions;
+use rocket::http::Status;
+use serde::__private::de::InternallyTaggedUnitVisitor;
+use sha2::Sha256;
+use crate::api::user_api::create_hash;
 use crate::models::user_model::User;
 use crate::models::wallet_model::Wallet;
 
@@ -66,13 +72,25 @@ impl MongoRepo {
         Ok(user)
     }
 
-    pub fn get_user(&self, e_mail: String) -> Result<User, Error> {
+    pub fn login_user(&self, e_mail: String, pass: String) -> Result<User, Status> {
         let filter = doc! {"e_mail": e_mail};
+
         let user_detail = self
             .col_users
             .find_one(filter, None)
             .ok()
             .expect("Error getting user's detail");
-        Ok(user_detail.unwrap())
+
+        return match user_detail {
+            None => {
+                Err(Status::InternalServerError)
+            }
+            Some(details) => {
+                if details.password != create_hash(pass.as_str(), Sha256::default()) {
+                    return Err(Status::BadRequest);
+                }
+                Ok(details)
+            }
+        };
     }
 }

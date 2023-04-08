@@ -30,14 +30,15 @@ pub fn create_user(
 
 #[post("/login", data = "<req_user>")]
 pub fn get_user(db: &State<MongoRepo>, req_user: Json<UserLogin>) -> Result<Json<User>, Status> {
-    let user_detail = db.get_user(req_user.e_mail.clone());
+    let user_detail = db.login_user(req_user.e_mail.clone(),
+                                    req_user.password.clone());
     match user_detail {
         Ok(user) => Ok(Json(user)),
         Err(_) => Err(Status::InternalServerError),
     }
 }
 
-fn create_hash<D>(msg: &str, mut hasher: D) -> String
+pub fn create_hash<D>(msg: &str, mut hasher: D) -> String
     where
         D: Digest,
         digest::Output<D>: std::fmt::LowerHex,

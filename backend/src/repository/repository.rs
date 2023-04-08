@@ -9,6 +9,7 @@ use mongodb::{
 };
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
+use mongodb::options::ClientOptions;
 use crate::models::user_model::User;
 use crate::models::wallet_model::Wallet;
 
@@ -20,12 +21,11 @@ pub struct MongoRepo {
 impl MongoRepo {
     pub fn init() -> Self {
         dotenv().ok();
-        let uri = match env::var("MONGOURI") {
-            Ok(v) => v.to_string(),
-            Err(_) => format!("Error loading env variable"),
-        };
-        let client = Client::with_uri_str(uri).unwrap();
-        let db = client.database("DB");
+        let uri = "mongodb+srv://RaresCon:LpXTTDBGwyZC3RS2@db.wrcp80s.mongodb.net/?retryWrites=true&w=majority";
+        let mut client_options = ClientOptions::parse(uri);
+        let client = Client::with_options(client_options.unwrap());
+
+        let db = client.expect("No database found\n").database("DB");
         let col_users: Collection<User> = db.collection("User");
         let col_wallets: Collection<Wallet> = db.collection("Wallet");
         MongoRepo { col_users, col_wallets }

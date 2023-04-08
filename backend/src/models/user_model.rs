@@ -12,7 +12,6 @@ pub struct User {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserLogin {
-    #[serde(rename = "_id")]
     pub e_mail: String,
     pub password: String,
 }

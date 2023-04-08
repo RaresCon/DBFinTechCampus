@@ -2,15 +2,11 @@ mod api;
 mod models;
 mod repository;
 
+// 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
 #[macro_use] extern crate rocket;
 use rocket::{get, http::Status, serde::json::Json};
 use crate::repository::repository::MongoRepo;
 use api::user_api::{create_user, get_user};
-
-#[get("/")]
-fn hello() -> Result<Json<String>, Status> {
-    Ok(Json(String::from("")))
-}
 
 #[launch]
 fn rocket() -> _ {

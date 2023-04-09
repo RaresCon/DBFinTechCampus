@@ -6,6 +6,7 @@ use sha2::{digest, Digest, Sha256};
 use crate::api::user_api::create_hash;
 
 use crate::models::admin_model::{AdminToken, AdminLogin};
+use crate::models::transaction_model::Transaction;
 
 #[post("/admin/register", data = "<new_admin>")]
 pub fn register_admin(db: &State<MongoRepo>, new_admin: Json<Admin>) -> Result<Json<AdminToken>, Status> {
@@ -37,4 +38,17 @@ pub fn login_as_admin(db: &State<MongoRepo>, admin: Json<AdminLogin>) -> Result<
     }
 }
 
-// #[post]
+#[post("/admin/send_request", data = "<transaction>")]
+pub fn request_pay(db: &State<MongoRepo>, transaction: Json<Transaction>) -> Result<Status, Status> {
+    match db.request_pay_admin(transaction.payer.to_owned(),
+                               transaction.receiver.to_owned(),
+                               transaction.intent.to_owned(),
+                               transaction.amount.to_owned(),
+                               transaction.category.to_owned(),
+                               chrono::offset::Local::now().to_string(),
+                               " ".to_string()
+                  ) {
+        Err(status) => { Err(status) }
+        Ok(_transaction) => { Ok(Status::Ok) }
+    }
+}

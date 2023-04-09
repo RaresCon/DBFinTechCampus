@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Wallet {
     #[serde(rename = "_id")]
     pub id: ObjectId,
+    pub name: String,
     pub e_mail: String,
     pub personal_num: String,
     pub transactions: Vec<Transaction>,

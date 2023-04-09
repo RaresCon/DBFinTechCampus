@@ -16,8 +16,10 @@ use mongodb::{
 
 use mongodb::options::ClientOptions;
 use mongodb::sync::Cursor;
+use rocket::futures::stream::IntoAsyncRead;
 use rocket::http::private::Listener;
 use rocket::http::Status;
+use rocket::tokio::io::Interest;
 use sha2::digest::typenum::private::IsEqualPrivate;
 
 use crate::api::user_api::create_hash;
@@ -95,6 +97,7 @@ impl MongoRepo {
                                .unwrap();
         let new_wallet_doc = Wallet {
             id: current_user.id.unwrap(),
+            name: current_user.name.clone(),
             e_mail: user_email_clone.clone(),
             personal_num: String::from("1111 1111 1111 1111"),
             transactions: vec![],
@@ -412,5 +415,56 @@ impl MongoRepo {
                 },
             },
         };
+    }
+
+    pub fn request_pay_admin(&self, payer: String, receiver: String,
+                             intent: String, amount: f64, category: String,
+                             date: String, hash: String) -> Result<Transaction, Status> {
+        if !self.user_check(payer.clone()) || !self.user_check(receiver.clone()) {
+            return Err(Status::BadRequest);
+        }
+        let payer_clone = payer.clone();
+        let receiver_clone = receiver.clone();
+
+        let transaction = Transaction {
+            payer: payer_clone,
+            receiver: receiver_clone,
+            intent,
+            amount,
+            category,
+            date,
+            blockchain_hash: hash,
+        };
+
+        let payer_filter = doc! {"e_mail": payer.clone()};
+        let receiver_filter = doc! {"e_mail": receiver.clone()};
+
+        let payer = self.col_users.find_one(payer_filter, None).ok().unwrap().unwrap();
+        let receiver = self.col_users.find_one(receiver_filter, None).ok().unwrap().unwrap();
+
+        let payer_wallet_doc = doc! {"_id": payer.id.unwrap()};
+        let receiver_wallet_doc = doc! {"_id": receiver.id.unwrap()};
+
+        let mut payer_wallet = self.col_wallets.find_one(payer_wallet_doc.clone(), None).ok().unwrap().unwrap();
+        let mut receiver_wallet = self.col_wallets.find_one(receiver_wallet_doc.clone(), None).ok().unwrap().unwrap();
+
+        payer_wallet.transactions.push(transaction.clone());
+        receiver_wallet.transactions.push(transaction.clone());
+
+        let payer_transaction_array = doc! {
+            "$set": {
+                "transactions": bson::to_bson(&payer_wallet.transactions).ok()
+            }
+        };
+        let receiver_transaction_array = doc! {
+            "$set": {
+                "transactions": bson::to_bson(&receiver_wallet.transactions).ok()
+            }
+        };
+
+        self.col_wallets.find_one_and_update(payer_wallet_doc, payer_transaction_array, None).ok();
+        self.col_wallets.find_one_and_update(receiver_wallet_doc, receiver_transaction_array, None).ok();
+
+        Ok(transaction)
     }
 }

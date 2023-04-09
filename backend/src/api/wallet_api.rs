@@ -14,6 +14,3 @@ pub fn get_wallet(db: &State<MongoRepo>, user_id: Json<BearerToken>) -> Result<J
 }
 
 // #[post("/user/edit_wallet", data = "<>")]
-
-
-// pub fn get_wallet(db: &State<MongoRepo>, new_user: Json<User>) ->

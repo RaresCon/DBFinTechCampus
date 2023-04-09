@@ -4,7 +4,7 @@ use crate::models::partner_model::Partner;
 use rocket::{http::Status, serde::json::Json, State};
 use sha2::{digest, Digest, Sha256};
 
-use crate::models::user_model::{BearerToken, UserLogin};
+use crate::models::user_model::{BearerToken, PayToken, UserLogin};
 
 #[post("/register", data = "<new_user>")]
 pub fn register(
@@ -50,6 +50,11 @@ pub fn login(
         Ok(_) => Ok(Json(token)),
         Err(status) => Err(status),
     }
+}
+
+#[post("/pay", data = "<pay_token>")]
+pub fn pay_transaction(db: &State<MongoRepo>, pay_token: Json<PayToken>) -> Result<Status, Status> {
+    db.pay_transaction(pay_token.token.to_owned(), pay_token.date.to_owned())
 }
 
 pub fn create_hash<D>(msg: &str, mut hasher: D) -> String

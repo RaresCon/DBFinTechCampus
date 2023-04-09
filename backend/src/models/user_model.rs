@@ -20,3 +20,9 @@ pub struct UserLogin {
 pub struct BearerToken {
     pub token: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PayToken {
+    pub token: String,
+    pub date: String,
+}

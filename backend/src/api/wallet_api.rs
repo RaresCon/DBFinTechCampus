@@ -1,6 +1,6 @@
 use crate::{models::user_model::User, repository::repository::MongoRepo};
 
-use crate::models::wallet_model::Wallet;
+use crate::models::wallet_model::{Wallet, WalletEditInfo};
 use rocket::{http::Status, serde::json::Json, State};
 use sha2::{digest, Digest, Sha256};
 use crate::models::user_model::BearerToken;
@@ -12,5 +12,13 @@ pub fn get_wallet(db: &State<MongoRepo>, user_id: Json<BearerToken>) -> Result<J
         Ok(wallet) => { Ok(Json(wallet)) }
     }
 }
+//
+// #[post("/user/subscriptions", data = "<token>")]
+// pub fn get_subscriptions (db: &State<MongoRepo>, token: Json<BearerToken>) ->Result<Status, Status> {
+//
+// }
 
-// #[post("/user/edit_wallet", data = "<>")]
+#[post("/user/edit_budget", data = "<budget>")]
+pub fn set_budget(db: &State<MongoRepo>, budget: Json<WalletEditInfo>) -> Result<Status, Status> {
+    db.set_budget(budget.token.to_owned(), budget.new_value.to_owned())
+}

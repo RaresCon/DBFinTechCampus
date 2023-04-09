@@ -45,7 +45,7 @@ pub fn request_pay(db: &State<MongoRepo>, transaction: Json<Transaction>) -> Res
                                transaction.intent.to_owned(),
                                transaction.amount.to_owned(),
                                transaction.category.to_owned(),
-                               chrono::offset::Local::now().to_string(),
+                               chrono::offset::Local::now().to_string().split_once(".").unwrap().0.to_string(),
                                " ".to_string()
                   ) {
         Err(status) => { Err(status) }

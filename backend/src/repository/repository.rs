@@ -1,5 +1,6 @@
 extern crate dotenv;
 
+use std::arch::x86_64::_mm_extract_si64;
 use std::collections::LinkedList;
 use chrono::{Datelike, Timelike, Utc};
 use dotenv::dotenv;
@@ -23,10 +24,10 @@ use rocket::tokio::io::Interest;
 use sha2::digest::typenum::private::IsEqualPrivate;
 
 use crate::api::user_api::create_hash;
-use crate::models::offer_model::Offer;
+use crate::models::offer_model::{Offer, UserOffer};
 use crate::models::partner_model::Partner;
 use crate::models::transaction_model::Transaction;
-use crate::models::user_model::User;
+use crate::models::user_model::{User, UserLogin};
 use crate::models::wallet_model::Wallet;
 use sha2::Sha256;
 use crate::models::admin_model::Admin;
@@ -37,7 +38,7 @@ pub struct MongoRepo {
     col_wallets: Collection<Wallet>,
     col_partners: Collection<Partner>,
     col_offers: Collection<Offer>,
-    col_bought_offers: Collection<Offer>,
+    col_user_offers: Collection<UserOffer>,
     col_transaction_block: Collection<Transaction>,
     col_logged_users: Collection<User>
 }
@@ -55,7 +56,7 @@ impl MongoRepo {
         let col_wallets: Collection<Wallet> = db.collection("Wallet");
         let col_partners: Collection<Partner> = db.collection("Partner");
         let col_offers: Collection<Offer> = db.collection("Offer");
-        let col_bought_offers: Collection<Offer> = db.collection("BoughtOffer");
+        let col_user_offers: Collection<UserOffer> = db.collection("UserOffer");
         let col_transaction_block: Collection<Transaction> = db.collection("Transaction_block");
         let col_logged_users: Collection<User> = db.collection("LoggedUsers");
         MongoRepo {
@@ -64,7 +65,7 @@ impl MongoRepo {
             col_wallets,
             col_partners,
             col_offers,
-            col_bought_offers,
+            col_user_offers,
             col_transaction_block,
             col_logged_users,
         }
@@ -102,8 +103,11 @@ impl MongoRepo {
             personal_num: String::from("1111 1111 1111 1111"),
             transactions: vec![],
             history: vec![],
+            subscriptions: vec![],
             messages: vec![],
-            expected_buget: -1,
+            offers: vec![],
+            user_offers: vec![],
+            expected_budget: 0,
             coins: 100,
             currency: 0.0,
             savings: 0.0,
@@ -141,6 +145,103 @@ impl MongoRepo {
         };
     }
 
+    pub fn pay_transaction(&self, user_id: String, date: String) -> Result<Status, Status> {
+        let user = self.retrieve_logged_user(user_id).unwrap();
+        let filter = doc! {"_id": user};
+        let mut user_wallet = self.col_wallets.find_one(filter.clone(), None).ok().unwrap().unwrap();
+        let mut index = -1 as isize;
+        let mut found = false;
+
+        for transaction in &user_wallet.transactions {
+            index += 1 as isize;
+            if transaction.date == date {
+                if transaction.amount <= user_wallet.currency {
+                    user_wallet.currency -= transaction.amount;
+                    found = true;
+
+                    if user_wallet.currency <= (user_wallet.expected_budget / 3) as f64 {
+                        user_wallet.messages
+                                   .push("You have already used 2 / 3 of your monthly budget\nYou should try to save some money for the next month as well.".to_string())
+                    }
+                    break;
+                } else {
+                    println!("AICI 1");
+                    return Err(Status::BadRequest);
+                }
+            }
+        }
+        if !found {
+            return Err(Status::BadRequest);
+        }
+
+        let payed_transaction = user_wallet.transactions.remove(index as usize);
+
+        let filter_receiver = doc! {"e_mail": payed_transaction.clone().receiver};
+        let receiver = self.col_users.find_one(filter_receiver, None).ok().unwrap().unwrap();
+        let filter_wallet = doc! {"_id": receiver.id.unwrap()};
+        let mut receiver_wallet = self.col_wallets.find_one(filter_wallet.clone(), None).ok().unwrap().unwrap();
+
+        found = false;
+        index = -1 as isize;
+        for transaction in &receiver_wallet.transactions {
+            index += 1 as isize;
+            if transaction.date == date {
+                receiver_wallet.currency += transaction.amount;
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            println!("AICI 2");
+            return Err(Status::BadRequest);
+        }
+
+        let received_payment = receiver_wallet.transactions.remove(index as usize);
+        receiver_wallet.history.push(received_payment);
+        user_wallet.history.push(payed_transaction);
+
+        let payer_transaction_array = doc! {
+            "$set": {
+                "history": bson::to_bson(&user_wallet.history).ok(),
+                "transactions": bson::to_bson(&user_wallet.transactions).ok(),
+                "messages": bson::to_bson(&user_wallet.messages).ok(),
+                "currency": user_wallet.currency,
+            }
+        };
+        let receiver_transaction_array = doc! {
+            "$set": {
+                "history": bson::to_bson(&receiver_wallet.history).ok(),
+                "transactions": bson::to_bson(&receiver_wallet.transactions).ok(),
+                "currency": receiver_wallet.currency,
+            }
+        };
+
+        self.col_wallets.find_one_and_update(filter, payer_transaction_array, None).ok();
+        self.col_wallets.find_one_and_update(filter_wallet, receiver_transaction_array, None).ok();
+
+        Ok(Status::Ok)
+    }
+
+    pub fn set_budget(&self, user_id: String, budget: u32) -> Result<Status, Status> {
+        match self.retrieve_logged_user(user_id.clone()) {
+            None => { Err(Status::BadRequest) }
+            Some(id) => {
+                let filter = doc! {"_id": id};
+                println!("{}", id);
+                let new_budget = doc! {
+                    "$set": {
+                        "expected_budget": budget
+                    }
+                };
+                let wallet = self.col_wallets
+                                 .find_one_and_update(filter, new_budget, None)
+                                 .ok().unwrap().unwrap();
+
+                Ok(Status::Ok)
+            }
+        }
+    }
+
     pub fn create_partner(&self, new_partner: Partner) -> Result<InsertOneResult, Status> {
         if self.partner_check(new_partner.name.clone()) {
             return Err(Status::BadRequest);
@@ -171,6 +272,14 @@ impl MongoRepo {
         }
     }
 
+    // pub fn get_subscriptions(&self, user_id: String) -> Result<Transaction, Status> {
+    //     let user_id = self.retrieve_logged_user(user_id).unwrap();
+    //     let filter = doc! {"_id": user_id};
+    //     let wallet = self.col_wallets.find_one(filter, None).ok().unwrap().unwrap();
+    //
+    //
+    // }
+
     pub fn create_offer(&self, new_offer: Offer) -> Result<InsertOneResult, Status> {
         if !self.offer_check(new_offer.partner_name.clone(), new_offer.token.clone()) {
             return Err(Status::BadRequest);
@@ -196,8 +305,31 @@ impl MongoRepo {
         Ok(offer)
     }
 
+    pub fn create_user_offer(&self, new_user_offer: UserOffer) -> Result<InsertOneResult, Status> {
+        let new_offer_doc = UserOffer {
+            id: None,
+            name: new_user_offer.name,
+            description: new_user_offer.description,
+            cost: new_user_offer.cost,
+            category: new_user_offer.category,
+        };
+
+        let offer = self.col_user_offers.insert_one(new_offer_doc, None)
+                                        .ok().expect("UserOffer\n");
+
+        Ok(offer)
+    }
+
     pub fn get_offers(&self) -> Result<Vec<Offer>, Status> {
         let iter = self.col_offers.find(None, None).ok();
+        match iter {
+            None => return Err(Status::InternalServerError),
+            Some(offers_cursor) => Ok(offers_cursor.map(|temp| temp.unwrap()).collect()),
+        }
+    }
+
+    pub fn get_user_offers(&self) -> Result<Vec<UserOffer>, Status> {
+        let iter = self.col_user_offers.find(None, None).ok();
         match iter {
             None => return Err(Status::InternalServerError),
             Some(offers_cursor) => Ok(offers_cursor.map(|temp| temp.unwrap()).collect()),
@@ -226,14 +358,16 @@ impl MongoRepo {
                     Err(_) => { Err(Status::InternalServerError) },
                     Ok(expected) => match expected {
                         None => { Err(Status::InternalServerError) },
-                        Some(wallet) => match self.retrieve_offer(offer_id.clone()) {
+                        Some(mut wallet) => match self.retrieve_offer(offer_id.clone()) {
                             None => { Err(Status::InternalServerError) },
                             Some(offer) => {
                                 println!("{}", offer.cost);
                                 if offer.cost <= wallet.coins && offer.num >= 1 {
+                                    wallet.offers.push(offer.clone());
                                     let new_doc = doc! {
                                         "$set": {
-                                            "coins": (wallet.coins - offer.cost)
+                                            "coins": (wallet.coins - offer.cost),
+                                            "offers": bson::to_bson(&wallet.offers).ok(),
                                         },
                                     };
                                     self.col_wallets
@@ -263,6 +397,38 @@ impl MongoRepo {
             }
             None => Err(Status::BadRequest),
         };
+    }
+
+    pub fn buy_user_offer(&self, user_id: String, offer_id: String) -> Result<Status, Status> {
+        let user_id = self.retrieve_logged_user(user_id).unwrap();
+        let filter = doc! {"_id": user_id};
+        let mut wallet = self.col_wallets.find_one(filter.clone(), None).ok().unwrap().unwrap();
+        let user_offer = self.retrieve_user_offer(offer_id).unwrap();
+
+        if wallet.coins < user_offer.cost {
+            return Err(Status::BadRequest);
+        }
+
+        wallet.coins -= user_offer.cost;
+        let recv_filter = doc! {"name": user_offer.clone().name};
+        let recv_wallet = doc! {"_id": self.col_users.find_one(recv_filter, None).ok().unwrap().unwrap().id };
+        let receiver = self.col_wallets.find_one(recv_wallet.clone(), None).ok().unwrap().unwrap();
+        let recv_update = doc! {
+            "$set": {
+                "coins": (receiver.coins + user_offer.clone().cost),
+            }
+        };
+        self.col_wallets.find_one_and_update(recv_wallet, recv_update, None).ok();
+
+        let payer_update = doc! {
+            "$set": {
+                "coins": wallet.coins,
+                "user_offers": bson::to_bson(&wallet.user_offers.push(user_offer)).ok()
+            }
+        };
+        self.col_wallets.find_one_and_update(filter, payer_update, None).ok();
+
+        Ok(Status::Ok)
     }
 
     fn partner_check(&self, partner_name: String) -> bool {
@@ -344,6 +510,20 @@ impl MongoRepo {
 
     fn retrieve_offer(&self, offer_id: String) -> Option<Offer> {
         match self.get_offers() {
+            Err(_) => None,
+            Ok(offers_list) => {
+                for offer in offers_list {
+                    if offer.id == ObjectId::parse_str(offer_id.clone()).ok() {
+                        return Some(offer);
+                    }
+                }
+                None
+            }
+        }
+    }
+
+    fn retrieve_user_offer(&self, offer_id: String) -> Option<UserOffer> {
+        match self.get_user_offers() {
             Err(_) => None,
             Ok(offers_list) => {
                 for offer in offers_list {

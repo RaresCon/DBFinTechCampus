@@ -460,6 +460,8 @@ impl MongoRepo {
 
     fn user_check(&self, user_e_mail: String) -> bool {
         let filter = doc! {"e_mail": user_e_mail};
+
+
         return match self.col_users.find_one(filter, None) {
             Err(_) => false,
             Ok(expected) => match expected {
@@ -597,10 +599,23 @@ impl MongoRepo {
         };
     }
 
+    pub fn request_subs(&self, transaction: Transaction) -> Result<Transaction, Status> {
+        let filter = doc! {"name": transaction.clone().payer};
+        let user = self.col_users.find_one(filter, None).ok().unwrap().unwrap();
+        let wallet_filter = doc! {"_id": user.id.unwrap()};
+        let mut wallet = self.col_wallets.find_one(wallet_filter, None).ok().unwrap().unwrap();
+
+        wallet.subscriptions.push(transaction.clone());
+        Ok(transaction)
+    }
+
     pub fn request_pay_admin(&self, payer: String, receiver: String,
                              intent: String, amount: f64, category: String,
                              date: String, hash: String) -> Result<Transaction, Status> {
+        println!("{} {}", self.user_check(payer.clone()), self.user_check(receiver.clone()));
+
         if !self.user_check(payer.clone()) || !self.user_check(receiver.clone()) {
+            println!("aici");
             return Err(Status::BadRequest);
         }
         let payer_clone = payer.clone();

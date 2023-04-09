@@ -40,15 +40,35 @@ pub fn login_as_admin(db: &State<MongoRepo>, admin: Json<AdminLogin>) -> Result<
 
 #[post("/admin/send_request", data = "<transaction>")]
 pub fn request_pay(db: &State<MongoRepo>, transaction: Json<Transaction>) -> Result<Status, Status> {
+    let time = chrono::offset::Local::now().to_string().split_once(".").unwrap().0.to_string();
+    println!("AJUNG AICI");
     match db.request_pay_admin(transaction.payer.to_owned(),
                                transaction.receiver.to_owned(),
                                transaction.intent.to_owned(),
                                transaction.amount.to_owned(),
                                transaction.category.to_owned(),
-                               chrono::offset::Local::now().to_string().split_once(".").unwrap().0.to_string(),
-                               " ".to_string()
+                               time.clone(),
+                               create_hash(time.as_str(), Sha256::default())
                   ) {
         Err(status) => { Err(status) }
         Ok(_transaction) => { Ok(Status::Ok) }
+    }
+}
+
+#[post("/admin/set_subscription", data = "<transaction>")]
+pub fn request_subs(db: &State<MongoRepo>, transaction: Json<Transaction>) -> Result<Status, Status> {
+    let time = chrono::offset::Local::now().to_string().split_once(".").unwrap().0.to_string();
+    let new_transaction = Transaction {
+        payer: transaction.payer.to_owned(),
+        receiver: transaction.receiver.to_owned(),
+        intent: transaction.intent.to_owned(),
+        amount: transaction.amount.to_owned(),
+        category: transaction.category.to_owned(),
+        date: time.clone(),
+        blockchain_hash: create_hash(time.as_str(), Sha256::default()),
+    };
+    match db.request_subs(new_transaction) {
+        Err(status) => { Err(status) }
+        Ok(transaction) => { Ok(Status::Ok) }
     }
 }

@@ -8,14 +8,15 @@ import HomeComponent from "./components/home.component.jsx";
 import {Avatar} from "flowbite-react";
 import LoginComponent from "./components/login.component.jsx";
 import RegisterComponent from "./components/register.component.jsx";
+import HomeRoute from "./routes/home.route.jsx";
 
 function App() {
 
   return (
-      <div className="isolate bg-white dark:bg-gray-800 flex flex-col min-h-screen">
+      <div className="isolate bg-white dark:bg-gray-800 flex flex-col min-h-screen w-full">
         <Routes className="">
             <Route path="/" element={<HomeComponent />}/>
-            {/*<Route path="/home" element={}/>*/}
+            <Route path="/home/*" element={<HomeRoute/>}/>
             <Route path="/login" element={<LoginComponent/>}/>
             <Route path="/register" element={<RegisterComponent/>}/>
         </Routes>

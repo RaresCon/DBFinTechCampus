@@ -4,10 +4,6 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import {Link} from "react-router-dom";
 
 const navigation = [
-    { name: 'Product', href: '#' },
-    { name: 'Features', href: '#' },
-    { name: 'Marketplace', href: '#' },
-    { name: 'Company', href: '#' },
 ]
 
 export default function HomeComponent() {
@@ -46,7 +42,7 @@ export default function HomeComponent() {
                 <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
                     <div className="flex lg:flex-1">
                         <a href="#" className="-m-1.5 p-1.5">
-                            <span className="sr-only">Your Company</span>
+                            <span className="sr-only">DB App</span>
                             <img
                                 className="h-8 w-auto"
                                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Deutsche_Bank_logo_without_wordmark.svg/1200px-Deutsche_Bank_logo_without_wordmark.svg.png"
@@ -154,10 +150,10 @@ export default function HomeComponent() {
                     <div className="hidden sm:mb-8 sm:flex sm:justify-center">
                         <div className="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 dark:ring-gray-200/10 hover:ring-gray-900/20 dark:hover:ring-gray-400/20 dark:text-gray-400">
                             Announcing our next round of funding.{' '}
-                            <a href="#" className="font-semibold text-indigo-600">
+                            <Link to="/" className="font-semibold text-indigo-600">
                                 <span className="absolute inset-0" aria-hidden="true" />
                                 Read more <span aria-hidden="true">&rarr;</span>
-                            </a>
+                            </Link>
                         </div>
                     </div>
                     <div className="text-center">
@@ -165,19 +161,18 @@ export default function HomeComponent() {
                             Deutsche Bank student fintech campus
                         </h1>
                         <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
-                            Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo. Elit sunt amet
-                            fugiat veniam occaecat fugiat aliqua.
+                            Online banking made easier for students, and much more
                         </p>
                         <div className="mt-10 flex items-center justify-center gap-x-6">
                             <Link
-                                to="/login"
+                                to="/register"
                                 className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                             >
                                 Create an account
                             </Link>
-                            <a href="#" className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-400">
-                                Learn more <span aria-hidden="true">→</span>
-                            </a>
+                            <Link to="/login" className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-400">
+                                Already have an account <span aria-hidden="true">→</span>
+                            </Link>
                         </div>
                     </div>
                 </div>

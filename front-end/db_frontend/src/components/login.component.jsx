@@ -18,7 +18,7 @@ export default function LoginComponent() {
             password: data.password
         }
 
-        axios.post("enter-link", log)
+        axios.post("http://127.0.0.1:8000/login", log)
             .then(res => {
                 console.log(res.data);
                 setCookie("token", {

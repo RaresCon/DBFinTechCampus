@@ -12,11 +12,11 @@ pub fn get_wallet(db: &State<MongoRepo>, user_id: Json<BearerToken>) -> Result<J
         Ok(wallet) => { Ok(Json(wallet)) }
     }
 }
-
-#[post("/user/wallet/add", data = "<currency>")]
-pub fn set_currency(db: &State<MongoRepo>, currency: Json<WalletEditInfo>) -> Result<Status, Status> {
-    db.set_currency(currency.token.to_owned(), currency.new_value.to_owned())
-}
+//
+// #[post("/user/subscriptions", data = "<token>")]
+// pub fn get_subscriptions (db: &State<MongoRepo>, token: Json<BearerToken>) ->Result<Status, Status> {
+//
+// }
 
 #[post("/user/edit_budget", data = "<budget>")]
 pub fn set_budget(db: &State<MongoRepo>, budget: Json<WalletEditInfo>) -> Result<Status, Status> {

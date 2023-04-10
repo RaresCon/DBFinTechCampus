@@ -165,6 +165,7 @@ impl MongoRepo {
                     }
                     break;
                 } else {
+                    println!("AICI 1");
                     return Err(Status::BadRequest);
                 }
             }
@@ -191,6 +192,7 @@ impl MongoRepo {
             }
         }
         if !found {
+            println!("AICI 2");
             return Err(Status::BadRequest);
         }
 
@@ -240,29 +242,6 @@ impl MongoRepo {
         }
     }
 
-    pub fn set_currency(&self, user_id: String, currency: u32) -> Result<Status, Status> {
-        match self.retrieve_logged_user(user_id.clone()) {
-            None => { Err(Status::BadRequest) }
-            Some(id) => {
-                let filter = doc! {"_id": id};
-                let mut wallet = self.col_wallets.find_one(filter.clone(), None).ok().unwrap().unwrap();
-                wallet.currency += currency as f64;
-
-                let new_budget = doc! {
-                    "$set": {
-                        "currency": wallet.currency,
-                    }
-                };
-
-                let wallet = self.col_wallets
-                    .find_one_and_update(filter, new_budget, None)
-                    .ok().unwrap().unwrap();
-
-                Ok(Status::Ok)
-            }
-        }
-    }
-
     pub fn create_partner(&self, new_partner: Partner) -> Result<InsertOneResult, Status> {
         if self.partner_check(new_partner.name.clone()) {
             return Err(Status::BadRequest);
@@ -292,6 +271,14 @@ impl MongoRepo {
             Some(partners_cursor) => Ok(partners_cursor.map(|temp| temp.unwrap()).collect()),
         }
     }
+
+    // pub fn get_subscriptions(&self, user_id: String) -> Result<Transaction, Status> {
+    //     let user_id = self.retrieve_logged_user(user_id).unwrap();
+    //     let filter = doc! {"_id": user_id};
+    //     let wallet = self.col_wallets.find_one(filter, None).ok().unwrap().unwrap();
+    //
+    //
+    // }
 
     pub fn create_offer(&self, new_offer: Offer) -> Result<InsertOneResult, Status> {
         if !self.offer_check(new_offer.partner_name.clone(), new_offer.token.clone()) {
@@ -362,8 +349,6 @@ impl MongoRepo {
             Err(_) => Err(Status::BadRequest),
         };
     }
-
-
 
     pub fn buy_offer(&self, user_id: String, offer_id: String) -> Result<Status, Status> {
         return match self.retrieve_logged_user(user_id) {
